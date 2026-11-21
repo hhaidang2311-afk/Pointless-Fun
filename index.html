@@ -1160,12 +1160,12 @@ const AIC={
  fo:{ph:["Tên của bạn hoặc màu sắc/đồ vật hôm nay (VD: Lan, áo xanh, ly trà sữa)","Your name or today's colour/object (e.g. Lan, blue shirt, bubble tea)"],ml:60,g:[],
   btn:["🤖 AI phán quẻ hôm nay","🤖 AI reads today's fortune"],
   prompt:(v,g,len)=>"Hãy phán một quẻ bói vui ngày hôm nay ("+new Date().toLocaleDateString("vi-VN")+") bằng tiếng Việt, hài hước và vô tri nhưng có ích: gồm con số may mắn, màu hợp, và một lời khuyên thực tế cho ngày hôm nay"+(v?'. Cá nhân hóa theo yếu tố người dùng nhập: "'+v+'" (phân tích vui vì sao yếu tố này ảnh hưởng đến quẻ)':"")+". "+LENP[len]+" (mã ngẫu nhiên: "+seed()+")"},
- cn:{ph:["Nhập tin nhắn khó xử bạn nhận được (VD: Hỏi vay tiền, Hỏi lương/điểm thi)","Type the awkward message you got (e.g. asking to borrow money, asking your salary/grades)"],ml:150,
+  cn:{ph:["Nhập tin nhắn khó xử hoặc tình huống cần mở lời (VD: Hỏi vay tiền, Xin 100k người yêu...)","Type the awkward message or situation (e.g. asking for money, declining an invite...)"],ml:150,
   g:[{k:"mode",l:["Cách đáp trả","Reply style"],o:[["face","Khéo léo giữ thể diện","Tactful & face-saving"],["fun","Hài hước bẻ lái","Funny deflection"]],d:"face"}],
   btn:["🤖 AI soạn tin đáp trả","🤖 AI writes my reply"],
   prompt:(v,g,len)=>{const m=v||rnd(SIT_CN);
-   return g.mode=="face"?'Tôi vừa nhận được một tin nhắn khó xử: "'+m+'". Hãy soạn giúp tôi tin nhắn đáp trả bằng tiếng Việt thật khéo léo, lịch sự, giữ thể diện cho cả hai bên, từ chối hoặc né tránh nhẹ nhàng mà không mất lòng. '+LENP[len]+" (mã ngẫu nhiên: "+seed()+")"
-    :'Tôi vừa nhận được một tin nhắn khó xử: "'+m+'". Hãy soạn giúp tôi tin nhắn đáp trả bằng tiếng Việt theo kiểu hài hước, bẻ lái câu chuyện sang hướng vô tri, làm người hỏi bật cười mà quên luôn câu hỏi. '+LENP[len]+" (mã ngẫu nhiên: "+seed()+")"}}
+   return g.mode=="face"?'Tình huống giao tiếp của tôi: "'+m+'". Hãy đóng vai tôi và soạn giúp một tin nhắn tiếng Việt thật khéo léo, tự nhiên, đúng vai vế và giữ thể diện để gửi cho đối phương. '+LENP[len]+" (mã ngẫu nhiên: "+seed()+")"
+    :'Tình huống giao tiếp của tôi: "'+m+'". Hãy đóng vai tôi và soạn giúp một tin nhắn tiếng Việt hài hước, bẻ lái duyên dáng, đúng vai vế để gửi cho đối phương. '+LENP[len]+" (mã ngẫu nhiên: "+seed()+")"}}
 };
 const LENS=[["short","Ngắn","Short"],["medium","Trung bình","Medium"],["long","Dài","Long"]];
 const chipRow=(g,l,o,d)=>`<p class="c" style="margin:8px 0 2px;color:var(--mut);font-size:13px">${t(l[0],l[1])}</p><div class="chips" data-g="${g}" style="padding:0;justify-content:center">${o.map(x=>`<button type="button" class="chip ${x[0]==d?"on":""}" data-v="${x[0]}">${t(x[1],x[2])}</button>`).join("")}</div>`;
