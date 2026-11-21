@@ -12,10 +12,6 @@ module.exports = async function handler(req, res) {
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: 'Chưa nhận được GEMINI_API_KEY trên Vercel' });
-    }
-
     const response = await fetch(
       `https://googleapis.com{apiKey}`,
       {
@@ -32,7 +28,7 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ error: data.error?.message || 'Lỗi từ Google AI' });
     }
 
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'AI đang bận suy nghĩ, thử lại nhé!';
+    const reply = data.candidates?.at(0)?.content?.parts?.at(0)?.text || 'AI đang bận suy nghĩ, thử lại nhé!';
     return res.status(200).json({ reply });
   } catch (error) {
     return res.status(500).json({ error: error.message || 'Lỗi server nội bộ' });
