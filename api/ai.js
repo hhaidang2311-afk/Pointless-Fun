@@ -12,7 +12,7 @@ module.exports = async function handler(req, res) {
     }
 
     const apiKey = (process.env.GEMINI_API_KEY || '').trim();
-    const url = new URL('https://googleapis.com');
+    const url = new URL('https://' + 'aiplatform.googleapis.com' + '/v1/publishers/google/models/gemini-2.5-flash:generateContent');
     url.searchParams.set('key', apiKey);
 
     const response = await fetch(url.toString(), {
