@@ -13,9 +13,9 @@ module.exports = async function handler(req, res) {
     }
 
     const lengthConfig = {
-      short: { maxTokens: 120, note: ' (Yêu cầu: Trả lời siêu ngắn gọn, súc tích đúng 1-2 câu).' },
-      medium: { maxTokens: 280, note: ' (Yêu cầu: Trả lời độ dài trung bình khoảng 3-4 câu, mạch lạc, đủ ý).' },
-      long: { maxTokens: 550, note: ' (Yêu cầu: Trả lời chi tiết, trau chuốt khoảng 1-2 đoạn ngắn).' }
+      short: { maxTokens: 120, note: ' (Trả lời siêu ngắn gọn, tự nhiên đúng 1-2 câu).' },
+      medium: { maxTokens: 280, note: ' (Trả lời tự nhiên khoảng 3-4 câu, mạch lạc, đúng trọng tâm).' },
+      long: { maxTokens: 550, note: ' (Trả lời chi tiết, tự nhiên và cuốn hút khoảng 1-2 đoạn ngắn).' }
     };
 
     const current = lengthConfig[length] || lengthConfig.short;
@@ -23,14 +23,19 @@ module.exports = async function handler(req, res) {
     const host = ['generativelanguage', 'googleapis', 'com'].join('.');
     const endpoint = `https:/` + `/${host}/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`;
 
+    const systemRule = 'Viết tiếng Việt tự nhiên như người thật, bám sát 100% chi tiết người dùng nhập. Tự xác định cách xưng hô phù hợp đúng với đối tượng và mối quan hệ trong ngữ cảnh (tuyệt đối không mặc định xưng "em" nếu không phải cấp dưới/học sinh, không dùng văn mẫu sáo rỗng).';
+
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        systemInstruction: {
+          parts: [{ text: systemRule }]
+        },
         contents: [{ parts: [{ text: prompt + current.note }] }],
         generationConfig: {
           maxOutputTokens: current.maxTokens,
-          temperature: 0.85
+          temperature: 0.9
         }
       }),
     });
@@ -45,4 +50,4 @@ module.exports = async function handler(req, res) {
   } catch (error) {
     return res.status(500).json({ error: error.message || 'Lỗi kết nối' });
   }
-}
+};
