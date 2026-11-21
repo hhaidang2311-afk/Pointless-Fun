@@ -12,16 +12,16 @@ module.exports = async function handler(req, res) {
     }
 
     const apiKey = (process.env.GEMINI_API_KEY || '').trim();
-    const response = await fetch(
-      `https://googleapis.com{apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        }),
-      }
-    );
+    const url = new URL('https://googleapis.com');
+    url.searchParams.set('key', apiKey);
+
+    const response = await fetch(url.toString(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      }),
+    });
 
     const data = await response.json();
     if (!response.ok) {
