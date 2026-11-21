@@ -12,7 +12,6 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Thiếu nội dung yêu cầu' });
     }
 
-    // Luôn dùng bản Lite siêu nhẹ và tắt suy luận sâu (thinkingBudget: 0) ở mọi mức độ
     const lengthConfig = {
       short: { maxTokens: 120, note: ' (Yêu cầu: Trả lời siêu ngắn gọn, súc tích đúng 1-2 câu).' },
       medium: { maxTokens: 280, note: ' (Yêu cầu: Trả lời độ dài trung bình khoảng 3-4 câu, mạch lạc, đủ ý).' },
@@ -31,8 +30,7 @@ module.exports = async function handler(req, res) {
         contents: [{ parts: [{ text: prompt + current.note }] }],
         generationConfig: {
           maxOutputTokens: current.maxTokens,
-          temperature: 0.85,
-          thinkingConfig: { thinkingBudget: 0 }
+          temperature: 0.85
         }
       }),
     });
