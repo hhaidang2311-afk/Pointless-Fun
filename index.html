@@ -109,9 +109,18 @@ body{font-family:'Be Vietnam Pro',system-ui,-apple-system,"Segoe UI",Roboto,sans
 .st{border-radius:18px}
 .box{border-radius:28px;box-shadow:0 30px 90px rgba(124,58,237,.4)}
 .btn{font-weight:600}
+.ai-box{margin-top:6px;padding:14px 16px;border-radius:18px;border:1px solid rgba(167,139,250,.55);background:linear-gradient(120deg,rgba(124,58,237,.18),rgba(14,165,233,.14));animation:pop .25s}
+.ai-tag{display:inline-block;font-size:12px;font-weight:800;padding:2px 10px;border-radius:999px;background:linear-gradient(135deg,#7c3aed,#0ea5e9);color:#fff;margin-bottom:8px}
+.ai-rep{font-size:17px;line-height:1.6;white-space:pre-line;word-break:break-word}
+.ai-err{text-align:center;color:#f87171;font-weight:600}
+.ai-load{display:flex;align-items:center;gap:6px;color:var(--mut);font-size:14px;padding:6px 0}
+.ai-load i{width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#0ea5e9);animation:aid 1s ease-in-out infinite}
+.ai-load i:nth-child(2){animation-delay:.15s}.ai-load i:nth-child(3){animation-delay:.3s}
+@keyframes aid{0%,80%,100%{transform:scale(.5);opacity:.4}40%{transform:scale(1.2);opacity:1}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <header>
@@ -473,7 +482,7 @@ function setLang(l){LG=l;try{localStorage.setItem("v_lang",l)}catch(_){}document
 $("#lgb").onclick=()=>setLang(LG=="vi"?"en":"vi");
 setLang(LG);
 function share(x){const u=LG=="en"?"I just beat my record on a pointless game. Can you? 😎":x;if(navigator.share)navigator.share({text:u,url:location.href}).catch(()=>{});else try{navigator.clipboard.writeText(u+" "+location.href).then(()=>alert(t("Đã sao chép! Dán cho bạn bè nhé.","Copied! Paste it to your friends.")))}catch(_){prompt("Copy:",u+" "+location.href)}}
-async function dl(n,d){try{const x=await claude.use("downloads");if(x)return x.save({filename:n,data:d})}catch(_){}try{const a=document.createElement("a");a.href=URL.createObjectURL(d instanceof Blob?d:new Blob([d]));a.download=n;a.click()}catch(_){}}
+async function dl(n,d){try{const a=document.createElement("a");a.href=URL.createObjectURL(d instanceof Blob?d:new Blob([d]));a.download=n;a.click()}catch(_){}}
 
 /* sao lưu */
 function bkp(){
@@ -1055,69 +1064,99 @@ function profileUI(){
 }
 $("#acc").onclick=profileUI;accBtn();
 
-let CDB=null,CID="",CANW=null,CH=[],CT=null,seen=lg("chseen"),lastSend=0;
+/* ===== cộng đồng: chat Supabase realtime + góp ý Formspree + AI miễn phí ===== */
+const SB_URL="https://xlijnbippjscmycjrrrh.supabase.co",SB_KEY="sb_publishable_-AsqlfTjaumwaUizRvO6Kw_zrcLamlC",FORM_URL="https://formspree.io/f/mgaklzpe",AI_URL="/api/ai";
+let SB=null;try{SB=window.supabase.createClient(SB_URL,SB_KEY)}catch(_){SB=null}
+let CH=[],CT=null,seen=lg("chseen"),sending=false,lastSend=0,subbed=false,chatOK=null,chatErr=false,fbBusy=false,aiTok=0;
 const BADW=/\b(dm|dmm|vcl|vl|cc|fuck|shit|bitch)\b/gi,clean=s=>s.replace(/https?:\/\/\S+|www\.\S+/gi,"[link]").replace(BADW,"***");
-function bar(){const z=$("#cmz");if(!z)return;const n=CH.filter(m=>m.s>seen&&m.u!=CID).length;
+const myName=()=>{const p=prof();return String(p.n||p.i||"").trim().slice(0,20)||t("Ẩn danh","Anonymous")};
+const tms=m=>new Date(m.created_at).getTime()||0;
+function addMsg(m){if(!m||m.id==null||CH.some(x=>x.id===m.id))return false;CH.push({id:m.id,username:String(m.username||"?").slice(0,20),content:String(m.content||"").slice(0,200),created_at:m.created_at||new Date().toISOString()});CH.sort((a,b)=>tms(a)-tms(b));if(CH.length>200)CH=CH.slice(-200);return true}
+function bar(){const z=$("#cmz");if(!z)return;const me=myName(),n=CH.filter(m=>tms(m)>seen&&m.username!=me).length;
   z.innerHTML=`<span>💬 <b>${t("Cộng đồng","Community")}</b> – ${t("chat với mọi người & gửi góp ý cho đội ngũ","chat with everyone & send feedback to the team")}</span>${n?`<span class="chip" style="background:#ef4444;color:#fff;border-color:#ef4444">🔴 ${n} ${t("tin mới","new")}</span>`:""}<span><button class="btn gold" id="cmb">${t("💬 Vào cộng đồng","💬 Open community")}</button> <button class="btn" id="cmp">${t("👤 Hồ sơ","👤 Profile")}</button></span>`;
   $("#cmb").onclick=()=>comm("chat");$("#cmp").onclick=profileUI}
 const _sL=setLang;setLang=l=>{_sL(l);bar();accBtn()};
 function comm(tab){CT=tab;$("#mt").textContent=t("💬 Cộng đồng","💬 Community");$("#m").classList.add("on");stop=()=>{CT=null};
   $("#mb").innerHTML=`<div class="chips" style="padding:0 0 8px"><button class="chip ${tab=="chat"?"on":""}" id="t1">${t("💬 Chat mọi người","💬 Public chat")}</button><button class="chip ${tab=="fb"?"on":""}" id="t2">${t("📝 Góp ý cho đội ngũ","📝 Feedback to the team")}</button></div><div id="cb"></div>`;
   $("#t1").onclick=()=>comm("chat");$("#t2").onclick=()=>comm("fb");tab=="chat"?chatUI():fbUI()}
-async function send(txt){txt=clean(txt.trim().slice(0,200));if(!txt)return"empty";if(Date.now()-lastSend<2000)return"fast";lastSend=Date.now();
-  const p=slim(prof()),now=Date.now();
-  if(!CDB){CH.push({u:"me",p,t:txt,s:now});return"local"}
-  const mine=CH.filter(m=>m.u==CID).slice(-19).map(m=>({t:m.t,s:m.s}));mine.push({t:txt,s:now});
-  await CDB.collection("chat").doc(CID).set({p,m:mine});return"ok"}
+function subscribeChat(){if(!SB||subbed)return;subbed=true;
+  try{SB.channel("public:messages").on("postgres_changes",{event:"INSERT",schema:"public",table:"messages"},p=>{
+      if(addMsg(p.new)){if(CT=="chat"){seen=Date.now();sv("chseen",seen)}bar();if(CT=="chat")renderChat(true)}})
+    .subscribe(s=>{if(s=="SUBSCRIBED")chatOK=true;else if(s=="CHANNEL_ERROR"||s=="TIMED_OUT")chatOK=false;if(CT=="chat")chatStat()})}catch(_){chatOK=false}}
+async function loadChat(){
+  if(!SB){chatErr=true;renderChat(true);return}
+  try{const{data,error}=await SB.from("messages").select("id,username,content,created_at").order("created_at",{ascending:false}).limit(50);
+    if(error)throw error;chatErr=false;(data||[]).reverse().forEach(addMsg)}catch(_){chatErr=true}
+  seen=Date.now();sv("chseen",seen);bar();if(CT=="chat")renderChat(true)}
+function chatStat(){const s=$("#cst");if(!s)return;
+  s.textContent=!SB||chatErr||chatOK===false?t("⚠️ Chưa kết nối được chat chung. Kiểm tra mạng rồi mở lại nhé.","⚠️ Can't reach the public chat. Check your connection and reopen."):t("🟢 Đã kết nối – tin nhắn hiện ngay lập tức cho mọi người","🟢 Connected – messages appear instantly for everyone")}
 function chatUI(){
-  $("#cb").innerHTML=`<p class="c" id="cst" style="margin:0 0 6px;font-size:13px"></p><div id="msgs" style="height:300px;overflow:auto;border:1px solid var(--bd);border-radius:14px;padding:8px;background:var(--card)"></div><div style="display:flex;gap:6px;margin-top:8px"><input type="text" id="ci" maxlength="200" placeholder="${t("Nhập tin nhắn…","Type a message…")}"><button class="btn p" id="cs2">${t("Gửi","Send")}</button></div><p class="c" id="cm" style="margin:4px;color:#f87171;font-size:13px"></p>`;
-  async function go(){const v=$("#ci").value;$("#ci").value="";let r;try{r=await send(v)}catch(e){r="err"}
-    $("#cm").textContent=r=="fast"?t("Gửi chậm lại một chút nhé (2 giây/tin).","Slow down a little (1 message per 2 seconds)."):r=="err"?t("Không gửi được: tài khoản của bạn chưa có quyền ghi tin nhắn.","Could not send: your account can't post messages."):r=="local"?t("Đang ngoại tuyến: chỉ mình bạn thấy tin này.","Offline: only you can see this message."):"";
-    if(r=="ok"||r=="local"){seen=Date.now();sv("chseen",seen)}renderChat()}
-  $("#cs2").onclick=go;$("#ci").onkeydown=e=>{if(e.key=="Enter")go()};seen=Date.now();sv("chseen",seen);bar();renderChat()}
-function renderChat(){const b=$("#msgs");if(!b)return;const near=b.scrollHeight-b.scrollTop-b.clientHeight<60;
-  $("#cst").textContent=CDB?(CANW===false?t("👀 Chỉ xem: tài khoản của bạn chưa được gửi tin","👀 Read-only: your account can't post"):t("🟢 Đã kết nối – mọi người đang thấy tin nhắn của bạn","🟢 Connected – everyone can see your messages")):t("⚪ Chưa nối được chat chung (cần mở bằng tài khoản Claude được mời). Tin chỉ lưu trên máy bạn.","⚪ Shared chat not connected (open with an invited Claude account). Messages stay on this device.");
-  b.innerHTML=CH.length?CH.map(m=>{const p=m.p||{},me=m.u==CID||m.u=="me",id=/^[a-z0-9_]{3,16}$/i.test(p.i||"")?" @"+p.i:"";
-    return`<div style="display:flex;gap:8px;margin:6px 0;${me?"flex-direction:row-reverse":""}"><div style="width:34px;height:34px;border-radius:50%;overflow:hidden;flex:none;display:grid;place-items:center;font-size:20px;background:rgba(128,128,128,.2)">${avH(p.a)}</div><div style="max-width:78%"><small style="color:var(--mut)">${esc(String(p.n||"?").slice(0,20))}${esc(id)} · ${ttl(p.ti)} · ${new Date(m.s).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</small><div style="background:${me?"linear-gradient(135deg,#7c3aed,#0ea5e9)":"rgba(128,128,128,.2)"};color:${me?"#fff":"inherit"};padding:6px 10px;border-radius:14px;word-break:break-word">${esc(m.t)}</div></div></div>`}).join(""):`<p class="c" style="color:var(--mut)">${t("Chưa có tin nhắn. Hãy là người đầu tiên!","No messages yet. Be the first!")}</p>`;
-  if(near)b.scrollTop=b.scrollHeight}
+  $("#cb").innerHTML=`<p class="c" id="cst" style="margin:0 0 6px;font-size:13px"></p><div id="msgs" style="height:300px;overflow:auto;border:1px solid var(--bd);border-radius:14px;padding:8px;background:var(--card)"><div class="ai-load"><i></i><i></i><i></i><span>${t("Đang tải tin nhắn…","Loading messages…")}</span></div></div><div style="display:flex;gap:6px;margin-top:8px"><input type="text" id="ci" maxlength="200" placeholder="${t("Nhập tin nhắn…","Type a message…")}"><button class="btn p" id="cs2">${t("Gửi","Send")}</button></div><p class="c" id="cm" style="margin:4px;color:#f87171;font-size:13px"></p>`;
+  async function go(){
+    if(sending)return;const inp=$("#ci"),cm=$("#cm");if(!inp)return;
+    const txt=clean(inp.value.trim().slice(0,200));
+    if(!txt){cm.textContent=t("Hãy nhập tin nhắn trước khi gửi.","Please type a message first.");return}
+    if(Date.now()-lastSend<2000){cm.textContent=t("Gửi chậm lại một chút nhé (2 giây/tin).","Slow down a little (1 message per 2 seconds).");return}
+    if(!SB){cm.textContent=t("❌ Chưa kết nối được máy chủ chat.","❌ Chat server not reachable.");return}
+    sending=true;lastSend=Date.now();cm.textContent="";const bt=$("#cs2");if(bt)bt.disabled=true;
+    try{const{data,error}=await SB.from("messages").insert({username:myName(),content:txt}).select().single();
+      if(error)throw error;if(inp)inp.value="";if(data)addMsg(data);seen=Date.now();sv("chseen",seen);bar();renderChat(true)}
+    catch(_){const c2=$("#cm");if(c2)c2.textContent=t("❌ Không gửi được tin nhắn. Thử lại nhé.","❌ Couldn't send the message. Please try again.")}
+    finally{sending=false;const b2=$("#cs2");if(b2)b2.disabled=false}}
+  $("#cs2").onclick=go;$("#ci").onkeydown=e=>{if(e.key=="Enter")go()};
+  chatStat();subscribeChat();loadChat()}
+function renderChat(force){const b=$("#msgs");if(!b)return;const near=b.scrollHeight-b.scrollTop-b.clientHeight<60,me=myName();chatStat();
+  b.innerHTML=CH.length?CH.map(m=>{const mine=m.username==me,p=prof(),av=mine?avH(p.a):esc((m.username||"?").trim().charAt(0).toUpperCase()||"?");
+    return`<div style="display:flex;gap:8px;margin:6px 0;${mine?"flex-direction:row-reverse":""}"><div style="width:34px;height:34px;border-radius:50%;overflow:hidden;flex:none;display:grid;place-items:center;font-size:${mine?20:16}px;font-weight:700;background:rgba(128,128,128,.2)">${av}</div><div style="max-width:78%"><small style="color:var(--mut)">${esc(m.username)} · ${new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</small><div style="background:${mine?"linear-gradient(135deg,#7c3aed,#0ea5e9)":"rgba(128,128,128,.2)"};color:${mine?"#fff":"inherit"};padding:6px 10px;border-radius:14px;word-break:break-word">${esc(m.content)}</div></div></div>`}).join(""):`<p class="c" style="color:var(--mut)">${t("Chưa có tin nhắn. Hãy là người đầu tiên!","No messages yet. Be the first!")}</p>`;
+  if(force||near)b.scrollTop=b.scrollHeight}
 function fbUI(){
-  $("#cb").innerHTML=`<p class="c" style="margin:0 0 8px;color:var(--mut)">${t("Góp ý gửi thẳng tới đội ngũ. Chỉ đội ngũ đọc được.","Feedback goes straight to the team. Only the team can read it.")}</p><div class="chips" id="fk" style="padding:0 0 6px"></div><textarea id="ft" maxlength="600" placeholder="${t("Bạn muốn góp ý điều gì?","What would you like to tell us?")}"></textarea><p class="c"><button class="btn p" id="fs">${t("📨 Gửi góp ý","📨 Send feedback")}</button></p><p class="c" id="fm" style="margin:0"></p>`;
-  let k=0;const KS=[t("💡 Ý tưởng","💡 Idea"),t("🐞 Báo lỗi","🐞 Bug"),t("❤️ Khen","❤️ Praise")],r=()=>$("#fk").innerHTML=KS.map((x,i)=>`<button class="chip ${i==k?"on":""}" data-k="${i}">${x}</button>`).join("");r();
+  $("#cb").innerHTML=`<p class="c" style="margin:0 0 8px;color:var(--mut)">${t("Góp ý gửi thẳng tới đội ngũ. Chỉ đội ngũ đọc được.","Feedback goes straight to the team. Only the team can read it.")}</p><div class="chips" id="fk" style="padding:0 0 6px"></div><textarea id="ft" maxlength="600" placeholder="${t("Bạn muốn góp ý điều gì?","What would you like to tell us?")}"></textarea><p class="c"><button class="btn p" id="fs">${t("📨 Gửi góp ý","📨 Send feedback")}</button></p><div id="fm" class="c" style="margin:0"></div>`;
+  let k=0;const KV=["Ý tưởng","Báo lỗi","Khen"],KS=[t("💡 Ý tưởng","💡 Idea"),t("🐞 Báo lỗi","🐞 Bug"),t("❤️ Khen","❤️ Praise")],r=()=>$("#fk").innerHTML=KS.map((x,i)=>`<button class="chip ${i==k?"on":""}" data-k="${i}">${x}</button>`).join("");r();
   $("#fk").onclick=e=>{if(e.target.dataset.k!=null){k=+e.target.dataset.k;r()}};
-  $("#fs").onclick=async()=>{const v=$("#ft").value.trim(),m=$("#fm");if(v.length<5){m.textContent=t("Hãy viết ít nhất 5 ký tự nhé.","Please write at least 5 characters.");return}
-    if(!CDB||CANW===false){m.textContent=t("❌ Chưa gửi được: cần mở trang bằng tài khoản Claude được mời để nối với đội ngũ.","❌ Can't send yet: open the page with an invited Claude account to reach the team.");return}
-    try{const ref=CDB.collection("feedback").doc(CID),s=await ref.get(),old=s.exists&&Array.isArray(s.data().items)?s.data().items:[],p=prof();
-      await ref.set({items:[...old.slice(-29),{k,t:v,s:Date.now(),n:String(p.n||"").slice(0,20),i:String(p.i||"").slice(0,16),v:V?1:0}]});$("#ft").value="";m.textContent=t("✅ Đã gửi tới đội ngũ. Cảm ơn bạn!","✅ Sent to the team. Thank you!")}
-    catch(_){m.textContent=t("❌ Không gửi được (tài khoản chưa có quyền ghi).","❌ Could not send (account has no write access).")}}}
-bar();
-(async()=>{try{const w=p=>Promise.race([p,new Promise(r=>setTimeout(()=>r(null),10000))]);
-  const[db,user]=await Promise.all([w(claude.use("db")),w(claude.use("user"))]);if(!db||!user)return;
-  CID=await user.id();try{CANW=await user.can("data.write")}catch(_){}CDB=db;
-  db.collection("chat").onSnapshot(sn=>{const a=[];sn.docs.forEach(d=>{const v=d.data();if(!v||!Array.isArray(v.m))return;v.m.forEach(m=>a.push({u:d.id,p:v.p||{},t:String(m.t||"").slice(0,200),s:+m.s||0}))});a.sort((x,y)=>x.s-y.s);CH=a.slice(-120);bar();if(CT=="chat")renderChat()},()=>{});
-}catch(_){}})();
+  const say=(ok,msg)=>{const m=$("#fm");if(!m)return;m.innerHTML=`<div class="rule ${ok?"ok":""}" style="text-align:center;font-weight:600;font-size:15px"></div>`;m.firstChild.textContent=msg};
+  $("#fs").onclick=async()=>{if(fbBusy)return;const v=$("#ft").value.trim();
+    if(v.length<5){say(false,t("Hãy viết ít nhất 5 ký tự nhé.","Please write at least 5 characters."));return}
+    fbBusy=true;const bt=$("#fs");bt.disabled=true;const old=bt.textContent;bt.textContent=t("⏳ Đang gửi…","⏳ Sending…");$("#fm").innerHTML=`<div class="ai-load" style="justify-content:center"><i></i><i></i><i></i><span>${t("Đang gửi tới đội ngũ…","Sending to the team…")}</span></div>`;
+    try{const p=prof(),fd=new FormData();
+      fd.append("loai",KV[k]);fd.append("message",v);fd.append("ten",String(p.n||"").slice(0,20));fd.append("id",String(p.i||"").slice(0,16));fd.append("vip",V?"có":"không");fd.append("ngon_ngu",LG);fd.append("trang",location.href);fd.append("_subject","Góp ý mới từ Vô Tri Vui Vẻ – "+KV[k]);
+      const res=await fetch(FORM_URL,{method:"POST",headers:{"Accept":"application/json"},body:fd});
+      if(!res.ok)throw new Error("http "+res.status);
+      const el=$("#ft");if(el)el.value="";
+      say(true,t("✅ Gửi thành công! Cảm ơn bạn đã góp ý – đội ngũ sẽ đọc sớm nhất có thể.","✅ Sent successfully! Thank you – the team will read it soon."))}
+    catch(_){say(false,t("❌ Chưa gửi được. Kiểm tra mạng rồi thử lại nhé.","❌ Couldn't send. Check your connection and try again."))}
+    finally{fbBusy=false;const b2=$("#fs");if(b2){b2.disabled=false;b2.textContent=old}}}}
+bar();subscribeChat();
 
-/* tự động lưu theo tài khoản */
-let CS=0,CL=null,lastJ="";
-const RGX=/^(v_(?!lang)|vtvv)/;
-const snap=()=>{const o={};try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(RGX.test(k))o[k]=localStorage.getItem(k)}}catch(_){}return o};
-function cst(){const c=$("#cs");if(c)c.textContent=CS==1?"☁️ "+t("Đã tự động lưu vào tài khoản","Auto-saved to your account"):CS==2?"💾 "+t("Chưa lưu được vào tài khoản – đang lưu trên máy này","Not saved to an account – stored on this device"):"☁️ …"}
+/* ===== AI miễn phí: POST /api/ai {prompt} -> {reply} ===== */
+async function aiAsk(prompt,box,btn){
+  const tok=++aiTok;btn.disabled=true;box.style.display="block";
+  box.innerHTML=`<div class="ai-load"><i></i><i></i><i></i><span>${t("AI đang nghĩ ra thứ gì đó vô tri…","The AI is cooking up something pointless…")}</span></div>`;
+  try{const r=await fetch(AI_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt})});
+    if(!r.ok)throw new Error("http "+r.status);const d=await r.json();if(tok!=aiTok)return;
+    const s=String(d&&d.reply||"").trim();if(!s)throw new Error("empty");
+    box.innerHTML='<div class="ai-tag">🤖 AI</div><div class="ai-rep"></div><p class="c" style="margin:8px 0 0"><button class="btn" data-aic="1"></button></p>';
+    box.querySelector(".ai-rep").textContent=s;const cb=box.querySelector("[data-aic]");cb.textContent=t("📋 Sao chép","📋 Copy");
+    cb.onclick=()=>{try{navigator.clipboard.writeText(s).then(()=>cb.textContent=t("✓ Đã sao chép","✓ Copied"))}catch(_){cb.textContent=t("Hãy bôi đen và copy","Select and copy")}}}
+  catch(_){if(tok!=aiTok)return;box.innerHTML=`<div class="ai-err">😴 ${t("AI đang ngủ trưa, chưa trả lời được. Thử lại sau chút nhé!","The AI is napping and couldn't answer. Please try again in a moment!")}</div>`}
+  finally{if(tok==aiTok)btn.disabled=false}}
+const AIP={
+  ex:()=>"Hãy bịa ra một lời xin lỗi thật hài hước và vô tri nhưng đọc lên nghe cực kỳ nghiêm túc, tối đa 3 câu, bằng tiếng Việt. Lý do phải phi lý, bất ngờ, đừng lặp lại những lý do quen thuộc (mã ngẫu nhiên: "+Math.random().toString(36).slice(2,7)+").",
+  fo:()=>{const n=String(prof().n||"").trim();return "Hãy phán một quẻ bói ngày hôm nay ("+new Date().toLocaleDateString("vi-VN")+")"+(n?" cho bạn tên "+n:"")+" thật hài hước và vô tri: có 1 con số may mắn, 1 màu hợp và 1 lời khuyên nhảm nhí nhưng nghe rất thâm sâu, tối đa 4 câu, bằng tiếng Việt (mã ngẫu nhiên: "+Math.random().toString(36).slice(2,7)+")."},
+  cn:()=>{const sv_=$("#sv"),sit=sv_&&sv_.selectedOptions[0]?sv_.selectedOptions[0].textContent:"Xin nghỉ làm",ten=($("#tn")&&$("#tn").value.trim())||"sếp",tone=($("#tb .chip.on")||{}).textContent||"Hài hước";
+    return 'Viết giúp tôi một tin nhắn tình huống "'+sit+'" gửi cho '+ten+' với giọng '+tone+', hài hước và vô tri nhưng vẫn đủ lịch sự để gửi thật, tối đa 4 câu, bằng tiếng Việt (mã ngẫu nhiên: '+Math.random().toString(36).slice(2,7)+").";}
+};
+const AIL={ex:["🤖 AI bịa lý do siêu vô tri","🤖 AI invents a ridiculous excuse"],fo:["🤖 AI phán quẻ hôm nay","🤖 AI reads today's fortune"],cn:["🤖 AI viết hộ tin nhắn","🤖 AI writes the message for me"]};
+["ex","fo","cn"].forEach(k=>{const o=G[k];if(!o)return;
+  G[k]=el=>{const r=o(el),w=document.createElement("div");w.className="ai-wrap";
+    w.innerHTML=`<p class="c" style="margin:12px 0 8px"><button class="btn gold" data-ai="1">${t(AIL[k][0],AIL[k][1])}</button></p><div class="ai-box" style="display:none"></div>`;
+    el.appendChild(w);const bt=w.querySelector("[data-ai]"),bx=w.querySelector(".ai-box");
+    bt.onclick=()=>aiAsk(AIP[k](),bx,bt);
+    return()=>{aiTok++;if(typeof r=="function")r()}}});
+
+/* lưu tiến trình tự động ngay trên thiết bị (localStorage), không cần tài khoản */
+function cst(){const c=$("#cs");if(c)c.textContent="💾 "+t("Tự động lưu trên thiết bị này","Auto-saved on this device")}
 const _sl=setLang;setLang=l=>{_sl(l);cst();uq()};
-const RB=(k,a,b)=>k=="vtvv"?(b=="1"&&a!="1"):isNaN(+b)?(a==null||(k=="v_prof"&&pts(b)>pts(a))):!+b?false:!+a?true:(k=="v_rx"||k=="v_dg")?+b<+a:+b>+a;
-async function push(){if(!CL)return;const d=snap(),j=JSON.stringify(d);if(j==lastJ)return;lastJ=j;try{await CL.set({d,ts:Date.now()});CS=1}catch(_){CS=2}cst()}
-(async()=>{
-  cst();
-  try{
-    const w=p=>Promise.race([p,new Promise(r=>setTimeout(()=>r(null),10000))]);
-    const [db,user]=await Promise.all([w(claude.use("db")),w(claude.use("user"))]);
-    const id=db&&user?await user.id():null;
-    if(!id){CS=2;return cst()}
-    CL=db.collection("data/users/"+id).doc("progress");
-    const s=await CL.get(),r=s.exists?(s.data().d||{}):{};let ch=false;
-    for(const k in r)if(RGX.test(k)&&RB(k,localStorage.getItem(k),String(r[k]))){localStorage.setItem(k,String(r[k]));ch=true}
-    if(ch){V=localStorage.getItem("vtvv")=="1";draw();upd();typeof accBtn=="function"&&accBtn()}
-    await push();setInterval(push,5000);addEventListener("pagehide",push);
-  }catch(_){CS=2;cst()}
-})();
+cst();
 </script>
 </body>
 </html>
