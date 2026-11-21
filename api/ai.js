@@ -11,13 +11,12 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Thiếu nội dung yêu cầu' });
     }
 
-    // Tự đánh giá: câu ngắn (< 60 ký tự) dùng mức nhanh tiết kiệm; câu dài/phức tạp mới bật suy nghĩ sâu
     const isComplex = prompt.length > 60 || /bói|tư vấn|phân tích|giải thích|chi tiết/i.test(prompt);
-    const apiKey = (process.env.GEMINI_API_KEY || '').trim();
-    const url = new URL('https://' + '://googleapis.com' + '/v1beta/models/gemini-3.8-flash:generateContent');
-    url.searchParams.set('key', apiKey);
+    const apiKey = encodeURIComponent((process.env.GEMINI_API_KEY || '').trim());
+    const host = ['generativelanguage', 'googleapis', 'com'].join('.');
+    const endpoint = `https:/` + `/${host}/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
 
-    const response = await fetch(url.toString(), {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
