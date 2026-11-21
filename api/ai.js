@@ -24,6 +24,7 @@ module.exports = async function handler(req, res) {
     const endpoint = `https:/` + `/${host}/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`;
 
     const systemRule = 'Viết tiếng Việt tự nhiên như người thật, bám sát 100% chi tiết người dùng nhập. Tự xác định cách xưng hô phù hợp đúng với đối tượng và mối quan hệ trong ngữ cảnh (tuyệt đối không mặc định xưng "em" nếu không phải cấp dưới/học sinh, không dùng văn mẫu sáo rỗng).';
+    const overrideNote = '[LƯU Ý QUAN TRỌNG: Bỏ qua mọi yêu cầu xưng "em" mặc định nếu sai vai vế. Nếu nhắn cho bố mẹ/người thân phải xưng "con", nhắn bạn bè xưng "mình/tui", đúng theo ngữ cảnh thực tế sau đây]: ';
 
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -32,7 +33,7 @@ module.exports = async function handler(req, res) {
         systemInstruction: {
           parts: [{ text: systemRule }]
         },
-        contents: [{ parts: [{ text: prompt + current.note }] }],
+        contents: [{ parts: [{ text: overrideNote + prompt + current.note }] }],
         generationConfig: {
           maxOutputTokens: current.maxTokens,
           temperature: 0.9
