@@ -21,7 +21,7 @@ module.exports = async function handler(req, res) {
     const current = lengthConfig[length] || lengthConfig.short;
     const apiKey = encodeURIComponent((process.env.GEMINI_API_KEY || '').trim());
     const host = ['generativelanguage', 'googleapis', 'com'].join('.');
-    const endpoint = `https:/` + `/${host}/v1beta/models/gemini-3.5-flash-lite:streamGenerateContent?alt=sse&key=${apiKey}`;
+    const endpoint = `https:/` + `/${host}/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`;
 
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -35,45 +35,14 @@ module.exports = async function handler(req, res) {
       }),
     });
 
+    const data = await response.json();
     if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      return res.status(500).json({ error: errData.error?.message || 'AI đang bận, thử lại sau vài giây nhé!' });
+      return res.status(500).json({ error: data.error?.message || 'AI đang bận, thử lại sau vài giây nhé!' });
     }
 
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache');
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder('utf-8');
-    let buffer = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr && jsonStr !== '[DONE]') {
-            try {
-              const parsed = JSON.parse(jsonStr);
-              const text = parsed.candidates?.at(0)?.content?.parts?.at(0)?.text;
-              if (text) res.write(text);
-            } catch (e) {}
-          }
-        }
-      }
-    }
-
-    res.end();
+    const reply = data.candidates?.at(0)?.content?.parts?.at(0)?.text || 'AI đang bận suy nghĩ, thử lại nhé!';
+    return res.status(200).json({ reply });
   } catch (error) {
-    if (!res.headersSent) {
-      res.status(500).json({ error: error.message || 'Lỗi kết nối' });
-    } else {
-      res.end();
-    }
+    return res.status(500).json({ error: error.message || 'Lỗi kết nối' });
   }
-};
+}
