@@ -14,10 +14,10 @@ module.exports = async function handler(req, res) {
     // Đánh giá độ khó của yêu cầu
     const isComplex = prompt.length > 60 || /bói|tư vấn|phân tích|giải thích|chi tiết/i.test(prompt);
 
-    // Câu khó ưu tiên bản Flash xịn trước; câu bình thường ưu tiên bản Lite nhanh & tiết kiệm trước
+    // Câu khó ưu tiên bản 3.8-flash xịn trước; câu bình thường ưu tiên bản 3.5-flash-lite nhanh & tiết kiệm trước
     const models = isComplex
-      ? ['gemini-3.8-flash', 'gemini-3.8-flash-lite']
-      : ['gemini-3.8-flash-lite', 'gemini-3.8-flash'];
+      ? ['gemini-3.8-flash', 'gemini-3.5-flash-lite']
+      : ['gemini-3.5-flash-lite', 'gemini-3.8-flash'];
 
     const apiKey = encodeURIComponent((process.env.GEMINI_API_KEY || '').trim());
     const host = ['generativelanguage', 'googleapis', 'com'].join('.');
