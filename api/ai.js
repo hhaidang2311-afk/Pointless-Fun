@@ -6,40 +6,50 @@ module.exports = async function handler(req, res) {
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const prompt = (body && body.prompt) || '';
+    const length = (body && body.length) || 'short'; // 'short', 'medium', hoặc 'long'
 
     if (!prompt) {
       return res.status(400).json({ error: 'Thiếu nội dung yêu cầu' });
     }
 
-    // Đánh giá độ khó của yêu cầu
-    const isComplex = prompt.length > 60 || /bói|tư vấn|phân tích|giải thích|chi tiết/i.test(prompt);
+    // Phân luồng thông minh theo độ dài người dùng chọn
+    const configMap = {
+      short: {
+        models: ['gemini-3.5-flash-lite', 'gemini-3.8-flash'],
+        maxTokens: 120,
+        budget: 0,
+        note: ' (Yêu cầu: Trả lời siêu ngắn gọn, súc tích đúng 1-2 câu).'
+      },
+      medium: {
+        models: ['gemini-3.5-flash-lite', 'gemini-3.8-flash'],
+        maxTokens: 280,
+        budget: 0,
+        note: ' (Yêu cầu: Trả lời độ dài trung bình khoảng 3-4 câu, mạch lạc, đủ ý).'
+      },
+      long: {
+        models: ['gemini-3.8-flash', 'gemini-3.5-flash-lite'],
+        maxTokens: 600,
+        budget: 512,
+        note: ' (Yêu cầu: Trả lời chi tiết, trau chuốt và sâu sắc khoảng 1-2 đoạn ngắn).'
+      }
+    };
 
-    // Câu khó ưu tiên bản 3.8-flash xịn trước; câu bình thường ưu tiên bản 3.5-flash-lite nhanh & tiết kiệm trước
-    const models = isComplex
-      ? ['gemini-3.8-flash', 'gemini-3.5-flash-lite']
-      : ['gemini-3.5-flash-lite', 'gemini-3.8-flash'];
-
+    const current = configMap[length] || configMap.short;
     const apiKey = encodeURIComponent((process.env.GEMINI_API_KEY || '').trim());
     const host = ['generativelanguage', 'googleapis', 'com'].join('.');
     let lastError = 'AI đang bận suy nghĩ, thử lại nhé!';
 
-    for (const model of models) {
+    for (const model of current.models) {
       const endpoint = `https:/` + `/${host}/v1beta/models/${model}:generateContent?key=${apiKey}`;
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: isComplex
-                ? prompt + ' (Trả lời sáng tạo, sâu sắc nhưng súc tích trong khoảng 3-4 câu).'
-                : prompt + ' (Trả lời siêu ngắn gọn 1-2 câu hài hước, vô tri).'
-            }]
-          }],
+          contents: [{ parts: [{ text: prompt + current.note }] }],
           generationConfig: {
-            maxOutputTokens: isComplex ? 350 : 120,
-            temperature: 0.9,
-            thinkingConfig: { thinkingBudget: isComplex ? 512 : 0 }
+            maxOutputTokens: current.maxTokens,
+            temperature: 0.85,
+            thinkingConfig: { thinkingBudget: current.budget }
           }
         }),
       });
