@@ -1065,7 +1065,7 @@ function profileUI(){
 $("#acc").onclick=profileUI;accBtn();
 
 /* ===== cộng đồng: chat Supabase realtime + góp ý Formspree + AI miễn phí ===== */
-const SB_URL="https://xlijnbippjscmycjrrrh.supabase.co",SB_KEY="sb_publishable_-AsqlfTjaumwaUizRvO6Kw_zrcLamlC",FORM_URL="https://formspree.io/f/mgaklzpe",AI_URL="/api/ai";
+const SB_URL="https://xlijnbippjscmycjrrrh.supabase.co",SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsaWpuYmlwcGpzY215Y2pycnJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUyNTU5MDUsImV4cCI6MjExMDgzMTkwNX0.aw2F3ZA-gqsH-4D-SrTrPj2i0j_5rWyWRGO7Vbt9oIQ",FORM_URL="https://formspree.io/f/mgaklzpe",AI_URL="/api/ai";
 let SB=null;try{SB=window.supabase.createClient(SB_URL,SB_KEY)}catch(_){SB=null}
 let CH=[],CT=null,seen=lg("chseen"),sending=false,lastSend=0,subbed=false,chatOK=null,chatErr=false,fbBusy=false,aiTok=0;
 const BADW=/\b(dm|dmm|vcl|vl|cc|fuck|shit|bitch)\b/gi,clean=s=>s.replace(/https?:\/\/\S+|www\.\S+/gi,"[link]").replace(BADW,"***");
