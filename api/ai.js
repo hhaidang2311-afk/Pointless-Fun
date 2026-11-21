@@ -12,55 +12,34 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Thiếu nội dung yêu cầu' });
     }
 
-    const configMap = {
-      short: {
-        models: ['gemini-3.5-flash-lite', 'gemini-3.8-flash'],
-        maxTokens: 120,
-        budget: 0,
-        note: ' (Yêu cầu: Trả lời siêu ngắn gọn, súc tích đúng 1-2 câu).'
-      },
-      medium: {
-        models: ['gemini-3.5-flash-lite', 'gemini-3.8-flash'],
-        maxTokens: 280,
-        budget: 0,
-        note: ' (Yêu cầu: Trả lời độ dài trung bình khoảng 3-4 câu, mạch lạc, đủ ý).'
-      },
-      long: {
-        models: ['gemini-3.8-flash', 'gemini-3.5-flash-lite'],
-        maxTokens: 600,
-        budget: 512,
-        note: ' (Yêu cầu: Trả lời chi tiết, trau chuốt và sâu sắc khoảng 1-2 đoạn ngắn).'
-      }
+    // Luôn dùng bản Lite siêu nhẹ và tắt suy luận sâu (thinkingBudget: 0) ở mọi mức độ
+    const lengthConfig = {
+      short: { maxTokens: 120, note: ' (Yêu cầu: Trả lời siêu ngắn gọn, súc tích đúng 1-2 câu).' },
+      medium: { maxTokens: 280, note: ' (Yêu cầu: Trả lời độ dài trung bình khoảng 3-4 câu, mạch lạc, đủ ý).' },
+      long: { maxTokens: 550, note: ' (Yêu cầu: Trả lời chi tiết, trau chuốt khoảng 1-2 đoạn ngắn).' }
     };
 
-    const current = configMap[length] || configMap.short;
+    const current = lengthConfig[length] || lengthConfig.short;
     const apiKey = encodeURIComponent((process.env.GEMINI_API_KEY || '').trim());
     const host = ['generativelanguage', 'googleapis', 'com'].join('.');
-    let response = null;
+    const endpoint = `https:/` + `/${host}/v1beta/models/gemini-3.5-flash-lite:streamGenerateContent?alt=sse&key=${apiKey}`;
 
-    for (const model of current.models) {
-      const endpoint = `https:/` + `/${host}/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
-      const resFetch = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt + current.note }] }],
-          generationConfig: {
-            maxOutputTokens: current.maxTokens,
-            temperature: 0.85,
-            thinkingConfig: { thinkingBudget: current.budget }
-          }
-        }),
-      });
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt + current.note }] }],
+        generationConfig: {
+          maxOutputTokens: current.maxTokens,
+          temperature: 0.85,
+          thinkingConfig: { thinkingBudget: 0 }
+        }
+      }),
+    });
 
-      if (resFetch.ok) {
-        response = resFetch;
-        break;
-      }
-    }
-
-    if (!response) {
-      return res.status(500).json({ error: 'AI đang quá tải, thử lại sau vài giây nhé!' });
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      return res.status(500).json({ error: errData.error?.message || 'AI đang bận, thử lại sau vài giây nhé!' });
     }
 
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
