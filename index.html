@@ -1127,30 +1127,58 @@ function fbUI(){
     finally{fbBusy=false;const b2=$("#fs");if(b2){b2.disabled=false;b2.textContent=old}}}}
 bar();subscribeChat();
 
-/* ===== AI miễn phí: POST /api/ai {prompt} -> {reply} ===== */
-async function aiAsk(prompt,box,btn){
-  const tok=++aiTok;btn.disabled=true;box.style.display="block";
-  box.innerHTML=`<div class="ai-load"><i></i><i></i><i></i><span>${t("AI đang nghĩ ra thứ gì đó vô tri…","The AI is cooking up something pointless…")}</span></div>`;
-  try{const r=await fetch(AI_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt})});
+/* ===== AI miễn phí: POST /api/ai {prompt,length} -> {reply} ===== */
+const AI_CD=5000;let lastAI=0;
+function copyTxt(txt,btn,idle){
+  const done=()=>{btn.textContent=t("✓ Đã chép!","✓ Copied!");setTimeout(()=>{if(btn.isConnected)btn.textContent=idle},1800)};
+  const fb=()=>{try{const ta=document.createElement("textarea");ta.value=txt;ta.style.cssText="position:fixed;opacity:0";document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove();done()}catch(_){btn.textContent=t("Hãy bôi đen và copy","Select and copy")}};
+  try{navigator.clipboard.writeText(txt).then(done,fb)}catch(_){fb()}}
+function aiCooldown(btn,label){
+  const tick=()=>{if(!btn.isConnected)return;const left=Math.ceil((lastAI+AI_CD-Date.now())/1000);
+    if(left>0){btn.disabled=true;btn.textContent=label+" ("+left+"s)";setTimeout(tick,250)}else{btn.disabled=false;btn.textContent=label}};tick()}
+async function aiAsk(prompt,length,box,btn,label){
+  const tok=++aiTok;lastAI=Date.now();btn.disabled=true;box.style.display="block";
+  box.innerHTML=`<div class="ai-load"><i></i><i></i><i></i><span>${t("AI đang soạn nội dung cho bạn…","The AI is writing for you…")}</span></div>`;
+  try{const r=await fetch(AI_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt,length})});
     if(!r.ok)throw new Error("http "+r.status);const d=await r.json();if(tok!=aiTok)return;
     const s=String(d&&d.reply||"").trim();if(!s)throw new Error("empty");
-    box.innerHTML='<div class="ai-tag">🤖 AI</div><div class="ai-rep"></div><p class="c" style="margin:8px 0 0"><button class="btn" data-aic="1"></button></p>';
-    box.querySelector(".ai-rep").textContent=s;const cb=box.querySelector("[data-aic]");cb.textContent=t("📋 Sao chép","📋 Copy");
-    cb.onclick=()=>{try{navigator.clipboard.writeText(s).then(()=>cb.textContent=t("✓ Đã sao chép","✓ Copied"))}catch(_){cb.textContent=t("Hãy bôi đen và copy","Select and copy")}}}
-  catch(_){if(tok!=aiTok)return;box.innerHTML=`<div class="ai-err">😴 ${t("AI đang ngủ trưa, chưa trả lời được. Thử lại sau chút nhé!","The AI is napping and couldn't answer. Please try again in a moment!")}</div>`}
-  finally{if(tok==aiTok)btn.disabled=false}}
-const AIP={
-  ex:()=>"Hãy bịa ra một lời xin lỗi thật hài hước và vô tri nhưng đọc lên nghe cực kỳ nghiêm túc, tối đa 3 câu, bằng tiếng Việt. Lý do phải phi lý, bất ngờ, đừng lặp lại những lý do quen thuộc (mã ngẫu nhiên: "+Math.random().toString(36).slice(2,7)+").",
-  fo:()=>{const n=String(prof().n||"").trim();return "Hãy phán một quẻ bói ngày hôm nay ("+new Date().toLocaleDateString("vi-VN")+")"+(n?" cho bạn tên "+n:"")+" thật hài hước và vô tri: có 1 con số may mắn, 1 màu hợp và 1 lời khuyên nhảm nhí nhưng nghe rất thâm sâu, tối đa 4 câu, bằng tiếng Việt (mã ngẫu nhiên: "+Math.random().toString(36).slice(2,7)+")."},
-  cn:()=>{const sv_=$("#sv"),sit=sv_&&sv_.selectedOptions[0]?sv_.selectedOptions[0].textContent:"Xin nghỉ làm",ten=($("#tn")&&$("#tn").value.trim())||"sếp",tone=($("#tb .chip.on")||{}).textContent||"Hài hước";
-    return 'Viết giúp tôi một tin nhắn tình huống "'+sit+'" gửi cho '+ten+' với giọng '+tone+', hài hước và vô tri nhưng vẫn đủ lịch sự để gửi thật, tối đa 4 câu, bằng tiếng Việt (mã ngẫu nhiên: '+Math.random().toString(36).slice(2,7)+").";}
+    box.innerHTML='<div class="ai-tag">🤖 AI</div><div class="ai-rep"></div><p class="c" style="margin:8px 0 0"><button class="btn gold" data-aic="1"></button></p>';
+    box.querySelector(".ai-rep").textContent=s;const cb=box.querySelector("[data-aic]"),idle=t("📋 Copy nhanh","📋 Quick copy");cb.textContent=idle;cb.onclick=()=>copyTxt(s,cb,idle)}
+  catch(_){if(tok!=aiTok)return;box.innerHTML=`<div class="ai-err">😴 ${t("AI đang bận, chưa trả lời được. Thử lại sau chút nhé!","The AI is busy and couldn't answer. Please try again in a moment!")}</div>`}
+  finally{if(tok==aiTok)aiCooldown(btn,label)}}
+const rnd=a=>a[Math.floor(Math.random()*a.length)],seed=()=>Math.random().toString(36).slice(2,7);
+const LENP={short:"Trả lời NGẮN GỌN, tối đa 2 câu.",medium:"Trả lời độ dài vừa phải, khoảng 4-5 câu.",long:"Trả lời chi tiết, khoảng 8-10 câu, chia đoạn rõ ràng."};
+const SIT_EX=["đi làm muộn","nộp bài trễ hạn","từ chối lời mời đi chơi","quên sinh nhật bạn thân","hẹn mà đến trễ","quên trả lời tin nhắn cả ngày","làm hỏng đồ của bạn","nghỉ họp đột xuất"];
+const SIT_CN=["Hỏi vay tiền","Hỏi lương / điểm thi","Rủ đi nhậu cuối tuần","Hỏi bao giờ cưới / có người yêu"];
+const AIC={
+ ex:{ph:["Nhập vấn đề của bạn: VD đi làm muộn, nộp bài trễ, từ chối lời mời...","Describe your situation: e.g. late for work, late homework, declining an invite..."],ml:150,
+  g:[{k:"tone",l:["Giọng điệu","Tone"],o:[["pro","Chuyên nghiệp & Lịch sự","Professional & Polite"],["fun","Hài hước & Vô tri","Funny & Absurd"]],d:"pro"}],
+  btn:["🤖 Tạo lời xin lỗi","🤖 Write my apology"],
+  prompt:(v,g,len)=>{const sit=v||rnd(SIT_EX);
+   return g.tone=="pro"?'Hãy viết một lời xin lỗi chuyên nghiệp, lịch sự và chân thành bằng tiếng Việt cho tình huống: "'+sit+'". Viết chuẩn mực để có thể gửi ngay cho sếp, thầy cô hoặc đối tác, không đùa cợt, có hướng khắc phục hoặc cam kết. '+LENP[len]+" (mã ngẫu nhiên: "+seed()+")"
+    :'Hãy bịa một lời xin lỗi thật hài hước, lầy lội và vô tri bằng tiếng Việt cho tình huống: "'+sit+'". Lý do phải phi lý, sáng tạo, bất ngờ nhưng đọc lên nghe nghiêm túc, để trêu bạn bè. '+LENP[len]+" (mã ngẫu nhiên: "+seed()+")"}},
+ fo:{ph:["Tên của bạn hoặc màu sắc/đồ vật hôm nay (VD: Lan, áo xanh, ly trà sữa)","Your name or today's colour/object (e.g. Lan, blue shirt, bubble tea)"],ml:60,g:[],
+  btn:["🤖 AI phán quẻ hôm nay","🤖 AI reads today's fortune"],
+  prompt:(v,g,len)=>"Hãy phán một quẻ bói vui ngày hôm nay ("+new Date().toLocaleDateString("vi-VN")+") bằng tiếng Việt, hài hước và vô tri nhưng có ích: gồm con số may mắn, màu hợp, và một lời khuyên thực tế cho ngày hôm nay"+(v?'. Cá nhân hóa theo yếu tố người dùng nhập: "'+v+'" (phân tích vui vì sao yếu tố này ảnh hưởng đến quẻ)':"")+". "+LENP[len]+" (mã ngẫu nhiên: "+seed()+")"},
+ cn:{ph:["Nhập tin nhắn khó xử bạn nhận được (VD: Hỏi vay tiền, Hỏi lương/điểm thi)","Type the awkward message you got (e.g. asking to borrow money, asking your salary/grades)"],ml:150,
+  g:[{k:"mode",l:["Cách đáp trả","Reply style"],o:[["face","Khéo léo giữ thể diện","Tactful & face-saving"],["fun","Hài hước bẻ lái","Funny deflection"]],d:"face"}],
+  btn:["🤖 AI soạn tin đáp trả","🤖 AI writes my reply"],
+  prompt:(v,g,len)=>{const m=v||rnd(SIT_CN);
+   return g.mode=="face"?'Tôi vừa nhận được một tin nhắn khó xử: "'+m+'". Hãy soạn giúp tôi tin nhắn đáp trả bằng tiếng Việt thật khéo léo, lịch sự, giữ thể diện cho cả hai bên, từ chối hoặc né tránh nhẹ nhàng mà không mất lòng. '+LENP[len]+" (mã ngẫu nhiên: "+seed()+")"
+    :'Tôi vừa nhận được một tin nhắn khó xử: "'+m+'". Hãy soạn giúp tôi tin nhắn đáp trả bằng tiếng Việt theo kiểu hài hước, bẻ lái câu chuyện sang hướng vô tri, làm người hỏi bật cười mà quên luôn câu hỏi. '+LENP[len]+" (mã ngẫu nhiên: "+seed()+")"}}
 };
-const AIL={ex:["🤖 AI bịa lý do siêu vô tri","🤖 AI invents a ridiculous excuse"],fo:["🤖 AI phán quẻ hôm nay","🤖 AI reads today's fortune"],cn:["🤖 AI viết hộ tin nhắn","🤖 AI writes the message for me"]};
-["ex","fo","cn"].forEach(k=>{const o=G[k];if(!o)return;
+const LENS=[["short","Ngắn","Short"],["medium","Trung bình","Medium"],["long","Dài","Long"]];
+const chipRow=(g,l,o,d)=>`<p class="c" style="margin:8px 0 2px;color:var(--mut);font-size:13px">${t(l[0],l[1])}</p><div class="chips" data-g="${g}" style="padding:0;justify-content:center">${o.map(x=>`<button type="button" class="chip ${x[0]==d?"on":""}" data-v="${x[0]}">${t(x[1],x[2])}</button>`).join("")}</div>`;
+["ex","fo","cn"].forEach(k=>{const o=G[k],C=AIC[k];if(!o)return;
   G[k]=el=>{const r=o(el),w=document.createElement("div");w.className="ai-wrap";
-    w.innerHTML=`<p class="c" style="margin:12px 0 8px"><button class="btn gold" data-ai="1">${t(AIL[k][0],AIL[k][1])}</button></p><div class="ai-box" style="display:none"></div>`;
-    el.appendChild(w);const bt=w.querySelector("[data-ai]"),bx=w.querySelector(".ai-box");
-    bt.onclick=()=>aiAsk(AIP[k](),bx,bt);
+    w.innerHTML=`<div class="ai-box" style="display:block;margin-top:14px"><div class="ai-tag">🤖 ${t("AI trợ lý","AI assistant")}</div><input type="text" class="ai-in" maxlength="${C.ml}" placeholder="${t(C.ph[0],C.ph[1])}" style="width:100%">${C.g.map(g=>chipRow(g.k,g.l,g.o,g.d)).join("")}${chipRow("length",["Độ dài phản hồi","Response length"],LENS,"short")}<p class="c" style="margin:12px 0 0"><button class="btn gold" data-ai="1">${t(C.btn[0],C.btn[1])}</button></p></div><div class="ai-box ai-out" style="display:none"></div>`;
+    el.appendChild(w);
+    w.addEventListener("click",e=>{const c=e.target.closest(".chip");if(c&&c.parentNode.dataset.g){c.parentNode.querySelectorAll(".chip").forEach(x=>x.classList.remove("on"));c.classList.add("on")}});
+    const bt=w.querySelector("[data-ai]"),out=w.querySelector(".ai-out"),label=t(C.btn[0],C.btn[1]);
+    const pick=g=>{const x=w.querySelector('.chips[data-g="'+g+'"] .chip.on');return x?x.dataset.v:""};
+    bt.onclick=()=>{if(Date.now()-lastAI<AI_CD){out.style.display="block";out.innerHTML=`<div class="ai-err">⏳ ${t("Chờ vài giây rồi tạo tiếp nhé (cách nhau 5 giây).","Please wait a few seconds before generating again (5s apart).")}</div>`;return}
+      const v=w.querySelector(".ai-in").value.trim().slice(0,C.ml),g={};C.g.forEach(x=>g[x.k]=pick(x.k));
+      const len=pick("length")||"short";aiAsk(C.prompt(v,g,len),len,out,bt,label)};
     return()=>{aiTok++;if(typeof r=="function")r()}}});
 
 /* lưu tiến trình tự động ngay trên thiết bị (localStorage), không cần tài khoản */
