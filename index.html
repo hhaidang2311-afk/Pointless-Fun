@@ -1155,7 +1155,7 @@ const AIC={
   g:[{k:"tone",l:["Giọng điệu","Tone"],o:[["pro","Chuyên nghiệp & Lịch sự","Professional & Polite"],["fun","Hài hước & Vô tri","Funny & Absurd"]],d:"pro"}],
   btn:["🤖 Tạo lời xin lỗi","🤖 Write my apology"],
   prompt:(v,g,len)=>{const sit=v||rnd(SIT_EX);
-   return g.tone=="pro"?'Hãy viết một lời xin lỗi chuyên nghiệp, lịch sự và chân thành bằng tiếng Việt cho tình huống: "'+sit+'". Viết chuẩn mực để có thể gửi ngay cho sếp, thầy cô hoặc đối tác, không đùa cợt, có hướng khắc phục hoặc cam kết. '+LENP[len]+" (mã ngẫu nhiên: "+seed()+")"
+   return g.tone=="pro"?'Hãy viết một lời xin lỗi chân thành, lịch sự và đúng mực bằng tiếng Việt cho tình huống: "'+sit+'". Tự xác định đúng đối tượng nhận và cách xưng hô tự nhiên theo tình huống trên (ví dụ gửi bố mẹ xưng con, gửi bạn bè xưng mình/tui, gửi sếp/thầy cô xưng em), không đùa cợt. '+LENP[len]+" (mã ngẫu nhiên: "+seed()+")"
     :'Hãy bịa một lời xin lỗi thật hài hước, lầy lội và vô tri bằng tiếng Việt cho tình huống: "'+sit+'". Lý do phải phi lý, sáng tạo, bất ngờ nhưng đọc lên nghe nghiêm túc, để trêu bạn bè. '+LENP[len]+" (mã ngẫu nhiên: "+seed()+")"}},
  fo:{ph:["Tên của bạn hoặc màu sắc/đồ vật hôm nay (VD: Lan, áo xanh, ly trà sữa)","Your name or today's colour/object (e.g. Lan, blue shirt, bubble tea)"],ml:60,g:[],
   btn:["🤖 AI phán quẻ hôm nay","🤖 AI reads today's fortune"],
