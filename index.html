@@ -1454,7 +1454,7 @@ pg(el){
   rr();return()=>{clearInterval(fire);done=1}
 },
 wd(el){
-  const L=LG=="vi"?[5,6]:[5],ROWS=6;let w="",wa="",clue="",cat="",row=0,cur="",over=0,tok=0,hist=[],hard=false,catSel="";const KB=["qwertyuiop","asdfghjkl","zxcvbnm"],ks={};
+  const L=LG=="vi"?[5,6]:[5],ROWS=6,WS=new Set();let w="",wa="",clue="",cat="",row=0,cur="",over=0,tok=0,hist=[],hard=false,catSel="";const KB=["qwertyuiop","asdfghjkl","zxcvbnm"],ks={};
   const stat=()=>t("Đã chơi ","Played ")+lg("wdp")+" · "+t("Thắng ","Won ")+lg("wdw")+" · "+t("Chuỗi ","Streak ")+lg("wds")+" · "+t("Kỷ lục ","Best ")+lg("wdb");
   const CH=LG=="vi"?[["","🎲 Ngẫu nhiên"],["đồ ăn","🍜 Đồ ăn"],["động vật","🐱 Động vật"],["Gen Z","😎 Gen Z"],["đồ vật","📦 Đồ vật"]]:[["","🎲 Random"],["food","🍕 Food"],["animals","🐱 Animals"],["Gen Z slang","😎 Gen Z"],["objects","📦 Objects"]];
   el.innerHTML=`<div class="w2"><div class="w2h"><b>🔤 ${t("Đoán Chữ Bí Ẩn","Mystery Word")}</b><span><button class="w2i" id="wq1">❓</button></span></div>
