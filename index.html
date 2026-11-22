@@ -717,11 +717,33 @@ async function lib(r){
   $("#um").textContent=msg;
   $("#tl").innerHTML=L.length?L.map(m=>`<div class="it"><span style="font-size:24px">${m.v?"🎬":"🎵"}</span><div class="n"><b>${esc(m.name)}</b></div><button data-p="${m.id}" style="width:auto;padding:0 10px;border-radius:12px">▶</button>${V?`<button data-x="${m.id}" style="width:auto;padding:0 10px;border-radius:12px">🗑</button>`:""}</div>`).join(""):`<p class="c" style="color:var(--mut)">${t("Chưa có bài nào.","No tracks yet.")}</p>`;
   $("#fi").onchange=async e=>{const r2=await addFiles([...e.target.files]);uq();lib(r2)};
-  $("#tl").onclick=async e=>{const p=e.target.dataset.p,x=e.target.dataset.x;if(p){const m=L.find(z=>z.id==p);AU.src=URL.createObjectURL(m.blob);AU.play()}if(x&&V){await mDel(x);lib()}};
+   window._playIdx=(idx)=>{if(!L.length)return;const i=(idx+L.length)%L.length,m=L.at(i);window._curIdx=i;AU.src=URL.createObjectURL(m.blob);AU.play();showMini(m.name)};
+  $("#tl").onclick=async e=>{const p=e.target.dataset.p,x=e.target.dataset.x;if(p){const i=L.findIndex(z=>z.id==p);window._playIdx(i>=0?i:0)}if(x&&V){await mDel(x);lib()}};
+  AU.onended=()=>{if(typeof window._curIdx=="number")window._playIdx(window._curIdx+1)};
   AU.controls=true;AU.style.cssText="width:100%;margin-top:8px";$("#mb").appendChild(AU);
 }
 $("#fi0").onchange=async e=>{const r=await addFiles([...e.target.files]);e.target.value="";uq();lib(r)};
 $("#lbb").onclick=()=>lib();setInterval(uq,3000);uq();
+function showMini(name){
+  let mp=$("#v-mini");
+  if(!mp){
+    mp=document.createElement("div");mp.id="v-mini";
+    mp.style.cssText="position:fixed;right:16px;bottom:16px;z-index:9999;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(15,17,28,.92);border:1px solid rgba(167,139,250,.65);box-shadow:0 12px 32px rgba(0,0,0,.55);color:#fff;backdrop-filter:blur(12px);cursor:grab;user-select:none;touch-action:none;max-width:92vw";
+    mp.innerHTML=`<span style="font-size:16px">🎵</span><b id="vm-t" style="font-size:13px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></b><button id="vm-p" class="btn" style="padding:4px 8px;font-size:12px">⏮</button><button id="vm-pp" class="btn p" style="padding:4px 10px;font-size:12px">⏸</button><button id="vm-n" class="btn" style="padding:4px 8px;font-size:12px">⏭</button><button id="vm-x" style="border:0;background:none;color:#f87171;font-weight:800;font-size:15px;padding:0 4px">✕</button>`;
+    document.body.appendChild(mp);
+    let dx=0,dy=0,sx=0,sy=0,drag=0;
+    mp.onpointerdown=e=>{if(e.target.closest("button"))return;drag=1;mp.style.cursor="grabbing";const r=mp.getBoundingClientRect();sx=e.clientX-r.left;sy=e.clientY-r.top;mp.setPointerCapture(e.pointerId)};
+    mp.onpointermove=e=>{if(!drag)return;mp.style.right="auto";mp.style.bottom="auto";mp.style.left=Math.max(6,Math.min(innerWidth-mp.offsetWidth-6,e.clientX-sx))+"px";mp.style.top=Math.max(6,Math.min(innerHeight-mp.offsetHeight-6,e.clientY-sy))+"px"};
+    mp.onpointerup=()=>{drag=0;mp.style.cursor="grab"};
+    $("#vm-p").onclick=()=>window._playIdx&&window._playIdx((window._curIdx||0)-1);
+    $("#vm-n").onclick=()=>window._playIdx&&window._playIdx((window._curIdx||0)+1);
+    $("#vm-pp").onclick=()=>{if(AU.paused){AU.play();$("#vm-pp").textContent="⏸"}else{AU.pause();$("#vm-pp").textContent="▶"}};
+    $("#vm-x").onclick=()=>{AU.pause();AU.currentTime=0;mp.remove()};
+    AU.onplay=()=>{const b=$("#vm-pp");if(b)b.textContent="⏸"};
+    AU.onpause=()=>{const b=$("#vm-pp");if(b)b.textContent="▶"};
+  }
+  $("#vm-t").textContent=name||"Music";
+}
 
 /* ===== 7 game mới ===== */
 Object.assign(G,{
