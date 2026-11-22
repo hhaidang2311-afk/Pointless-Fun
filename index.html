@@ -1461,9 +1461,23 @@ wd(el){
   <div class="w2help" id="wph"><b>${t("Cách chơi","How to play")}</b><p>${t("Đoán từ bí ẩn trong 6 lượt. Gõ một từ đủ số chữ rồi bấm Enter. Sau mỗi lượt, mỗi ô đổi màu để chỉ đường:","Guess the secret word in 6 tries. Type a full word and press Enter. After each try every tile changes colour to guide you:")}</p>
   <div class="w2ex"><span class="w2x g">C</span> ${t("xanh lá = đúng chữ, đúng chỗ","green = right letter, right spot")}</div><div class="w2ex"><span class="w2x y">C</span> ${t("vàng = từ có chữ này nhưng sai chỗ","yellow = in the word, wrong spot")}</div><div class="w2ex"><span class="w2x n">C</span> ${t("xám = từ không có chữ này","grey = not in the word")}</div>
   <p>${t("Dùng màu để loại chữ, giữ chữ đúng rồi đoán tiếp. Từ tiếng Việt gõ không dấu. Có gợi ý AI nếu bí!","Use the colours to eliminate letters and keep the right ones. Stuck? Ask the AI for a hint!")}</p><button class="w2b" id="wpc">${t("Đã hiểu, chơi thôi!","Got it, let's play!")}</button></div>
-  <div class="w2c" id="wchips">${CH.map((c,i)=>`<button class="w2ch${i?"":" on"}" data-c="${c[0]}">${c[1]}</button>`).join("")}</div>
-  <div class="c" id="wi" style="font-size:13px;color:var(--mut)"></div><div class="c" id="wm" style="min-height:24px;font-weight:800"></div><div class="w2g" id="wg"></div><div class="c" id="wf" style="min-height:22px;font-size:14px"></div><div class="v3q" id="wq" style="display:none"></div><div id="wkb"></div>
-  <div class="w2r"><button class="w2b" id="wh" style="background:#ca8a04">💡 ${t("Gợi ý AI","AI hint")}</button><button class="w2b" id="wn">🔄 ${t("Từ mới","New word")}</button></div><label class="w2l"><input type="checkbox" id="whd"> ${t("Chế độ Khó: phải dùng lại chữ đã lộ","Hard mode: must reuse revealed letters")}</label><div class="c" id="wsh" style="display:none"><button class="w2b" id="wsb" style="background:#16a34a">📤 ${t("Chia sẻ kết quả","Share result")}</button></div><div class="c" style="font-size:12px;color:var(--mut);margin-top:8px" id="wst"></div></div>`;
+  <div class="w2-split">
+    <div class="w2-left">
+      <div class="w2c" id="wchips">${CH.map((c,i)=>`<button class="w2ch${i?"":" on"}" data-c="${c[0]}">${c[1]}</button>`).join("")}</div>
+      <div class="c" id="wi" style="font-size:13px;color:var(--mut)"></div>
+      <div class="c" id="wm" style="min-height:22px;font-weight:800;font-size:14px"></div>
+      <div class="v3q" id="wq" style="display:none"></div>
+      <div id="wkb"></div>
+      <div class="w2r"><button class="w2b" id="wh" style="background:#ca8a04">💡 ${t("Gợi ý AI","AI hint")}</button><button class="w2b" id="wn">🔄 ${t("Từ mới","New word")}</button></div>
+      <label class="w2l"><input type="checkbox" id="whd"> ${t("Chế độ Khó: phải dùng lại chữ đã lộ","Hard mode: must reuse revealed letters")}</label>
+      <div class="c" id="wsh" style="display:none"><button class="w2b" id="wsb" style="background:#16a34a">📤 ${t("Chia sẻ kết quả","Share result")}</button></div>
+      <div class="c" id="wst" style="font-size:12px;color:var(--mut);margin-top:6px"></div>
+    </div>
+    <div class="w2-right">
+      <div class="w2g" id="wg"></div>
+      <div class="c" id="wf" style="min-height:20px;font-size:13px"></div>
+    </div>
+  </div></div>`;
   const grid=()=>{$("#wg").style.gridTemplateColumns=`repeat(${w.length},auto)`;$("#wg").innerHTML=Array.from({length:ROWS*w.length},()=>'<div class="w2x"></div>').join("");$("#wi").textContent=(cat?t("Chủ đề: ","Topic: ")+cat+" · ":"")+w.length+" "+t("chữ cái","letters")};
   const kb=()=>{$("#wkb").innerHTML=KB.map(r=>`<div class="v3k">${[...r].map(c=>`<button data-k="${c}" class="${ks[c]||""}">${c}</button>`).join("")}${r=="zxcvbnm"?'<button data-k="Enter">⏎</button><button data-k="Back">⌫</button>':""}</div>`).join("")};
   const paint=()=>{const T=$("#wg").children;for(let i=0;i<w.length;i++){const e=T[row*w.length+i];e.textContent=cur[i]||"";e.classList.toggle("f",!!cur[i])}};
@@ -1499,7 +1513,9 @@ wd(el){
 
 /* ===== v4: sổ lưu bút, xếp hạng, biên lai, người đang rảnh ===== */
 (()=>{const st=document.createElement("style");st.textContent=`
-.w2{padding:16px;border-radius:28px;background:radial-gradient(120% 90% at 15% 0%,rgba(124,58,237,.5),transparent 55%),radial-gradient(100% 80% at 100% 100%,rgba(14,165,233,.4),transparent 55%),#0b0d1c;border:1px solid rgba(255,255,255,.16);box-shadow:0 30px 70px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.2);user-select:none}
+.w2{max-width:860px;padding:14px;border-radius:28px;background:radial-gradient(120% 90% at 15% 0%,rgba(124,58,237,.5),transparent 55%),radial-gradient(100% 80% at 100% 100%,rgba(14,165,233,.4),transparent 55%),#0b0d1c;border:1px solid rgba(255,255,255,.16);box-shadow:0 30px 70px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.2);user-select:none}
+.w2-split{display:grid;grid-template-columns:1.15fr .85fr;gap:16px;align-items:center}
+@media(max-width:720px){.w2-split{grid-template-columns:1fr;gap:8px}}
 .w2h b{font-size:22px;background:linear-gradient(90deg,#c4b5fd,#67e8f9,#f9a8d4);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:-.5px}
 .w2g{transform:perspective(800px) rotateX(7deg);margin:12px auto 16px;gap:8px}
 .w2x{border-radius:13px;border:2px solid rgba(255,255,255,.2);background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.04));box-shadow:0 5px 0 rgba(0,0,0,.5),0 10px 18px rgba(0,0,0,.35);color:#fff;text-shadow:0 2px 4px rgba(0,0,0,.4);transition:transform .12s,box-shadow .12s}
