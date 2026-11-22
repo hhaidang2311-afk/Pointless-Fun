@@ -1498,15 +1498,14 @@ wd(el){
   $("#wkb").onclick=e=>{const b=e.target.closest("button");if(b)key(b.dataset.k)};
   $("#wq1").onclick=()=>$("#wph").classList.toggle("on");$("#wpc").onclick=()=>{$("#wph").classList.remove("on");sv("wdh",1)};if(!lg("wdh"))$("#wph").classList.add("on");
   $("#whd").onchange=e=>hard=e.target.checked;
-  $("#wchips").onclick=e=>{const b=e.target.closest("button");if(!b)return;catSel=b.dataset.c;[...$("#wchips").children].forEach(x=>x.classList.toggle("on",x==b));nw()};
-  let hs=0;$("#wh").onclick=()=>{if(over||!clue)return;const q=$("#wq");q.style.display="block";if(hs==0){q.innerHTML="💡 "+esc(clue);hs=1}else if(hs==1){const i=Math.random()*w.length|0;q.innerHTML+=`<br>🔎 ${t("Chữ thứ "+(i+1)+" là ","Letter "+(i+1)+" is ")}<b>${w[i].toUpperCase()}</b>`;hs=2}};
-  async function nw(){const k=++tok;if(!over&&row>0){sv("wdp",lg("wdp")+1);sv("wds",0)}over=1;row=0;cur="";hist=[];hs=0;for(const x in ks)delete ks[x];$("#whd").disabled=false;$("#wsh").style.display="none";$("#wf").textContent="";msg(t("AI đang nghĩ từ bí ẩn…","AI is picking a secret word…"));w="     ";wa="";clue="";cat="";$("#wq").style.display="none";grid();kb();$("#wst").textContent=stat();
-    const rec=[...WS].slice(-6).join(", ");
-    const r=await aiHid((LG=="vi"?`Tạo 1 từ tiếng Việt phổ biến${catSel?" thuộc chủ đề "+catSel:""}, viết KHÔNG DẤU liền nhau, đúng 5 hoặc 6 chữ cái a-z, kèm dạng có dấu, câu đố gợi ý vui (không chứa từ đó) và tên chủ đề. Không trùng: ${rec}. Trả ĐÚNG 1 dòng: khongdau|có dấu|câu đố|chủ đề. Mã: `:`Give one common English word of exactly 5 letters (a-z)${catSel?", topic "+catSel:""}, a funny riddle clue not containing the word, and the topic name. Not these: ${rec}. Reply EXACTLY one line: word|word|clue|topic. Code: `)+seed());if(k!=tok)return;
-    const p=r&&r.split("|").map(z=>z.trim());let c=p&&p.length>=4&&p[0].toLowerCase().replace(/[^a-z]/g,"");
-    if(c&&L.includes(c.length)&&!WS.has(c)&&nrm(p[1])==c&&p[2].length<130&&!nrm(p[2]).includes(c)){w=c;wa=p[1];clue=p[2];cat=p[3].slice(0,20)}
-    else{const lst=WF2[LG=="vi"?"vi":"en"],f0=lst.filter(x=>!WS.has(x[0])&&(!catSel||x[3]==catSel)),f=pick(f0.length?f0:lst.filter(x=>!WS.has(x[0])).length?lst.filter(x=>!WS.has(x[0])):lst);w=f[0];wa=f[1];clue=f[2];cat=f[3]}
-    WS.add(w);over=0;grid();kb();msg("")}
+  $("#wchips").onclick=e=>{const b=e.target.closest("button");if(!b)return;catSel=b.dataset.c;[...$("#wchips").children].forEach(x=>x.classList.toggle("on",x==b));aiNext=null;nw()};
+  let hs=0;$("#wh").onclick=()=>{if(over||!clue)return;const q=$("#wq");q.style.display="block";if(hs==0){q.innerHTML="💡 "+esc(clue);hs=1}else if(hs==1){const i=Math.random()*w.length|0;q.innerHTML+=`<br>🔎 ${t("Chữ thứ "+(i+1)+" là ","Letter "+(i+1)+" is ")}<b>${w.at(i).toUpperCase()}</b>`;hs=2}};
+  let aiNext=null;
+  const pullAi=()=>{const k=tok;aiHid((LG=="vi"?`Nghĩ 1 từ hoặc cụm từ tiếng Việt bất kỳ${catSel?" thuộc chủ đề "+catSel:""}, viết KHÔNG DẤU liền nhau dài từ 3 đến 12 chữ cái a-z (từ dài bao nhiêu thì ghi đủ bấy nhiêu chữ cái, tuyệt đối không viết tắt hay cắt bớt chữ), kèm dạng có dấu đầy đủ, câu gợi ý mô tả từ đó và tên chủ đề. Không trùng: ${[...WS].slice(-6).join(", ")}. Trả ĐÚNG 1 dòng: khongdau|có dấu|gợi ý|chủ đề. Mã: `:`Give any English word of 3 to 10 letters (a-z)${catSel?", topic "+catSel:""}, a clue not containing the word, and the topic name. Not these: ${[...WS].slice(-6).join(", ")}. Reply EXACTLY one line: word|word|clue|topic. Code: `)+seed()).then(r=>{if(k!=tok||!r)return;const p=r.split("|").map(z=>z.trim()),c=p&&p.length>=4&&(p.at(0)||"").toLowerCase().replace(/[^a-z]/g,"");if(c&&c.length>=3&&c.length<=12&&!WS.has(c)&&nrm(p.at(1))==c&&(p.at(2)||"").length<130&&!nrm(p.at(2)).includes(c))aiNext={w:c,wa:p.at(1),clue:p.at(2),cat:(p.at(3)||"").slice(0,20)}})};
+  function nw(){const k=++tok;if(!over&&row>0){sv("wdp",lg("wdp")+1);sv("wds",0)}row=0;cur="";hist=[];hs=0;for(const x in ks)delete ks[x];$("#whd").disabled=false;$("#wsh").style.display="none";$("#wf").textContent="";$("#wq").style.display="none";
+    if(aiNext){w=aiNext.w;wa=aiNext.wa;clue=aiNext.clue;cat=aiNext.cat;aiNext=null}
+    else{const lst=WF2[LG=="vi"?"vi":"en"],f0=lst.filter(x=>!WS.has(x.at(0))&&(!catSel||x.at(3)==catSel)),f1=lst.filter(x=>!WS.has(x.at(0))),f=pick(f0.length?f0:f1.length?f1:lst);w=f.at(0);wa=f.at(1);clue=f.at(2);cat=f.at(3)}
+    WS.add(w);over=0;grid();kb();msg("");$("#wst").textContent=stat();pullAi()}
   $("#wn").onclick=nw;nw();return()=>{tok++;removeEventListener("keydown",kd)}
 }
 });
